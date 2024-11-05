@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
@@ -83,7 +83,7 @@ contract RaffleTest is Test, CodeConstants {
         raffle.enterRaffle{value: entranceFee}();
         vm.warp(block.timestamp + interval + 1); // Advance the block timestamp to the next interval
         vm.roll(block.number + 1); // advance the block number
-        raffle.performUpkeep();
+        raffle.performUpkeep("");
 
         // Act / Assert
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
@@ -113,7 +113,7 @@ contract RaffleTest is Test, CodeConstants {
         raffle.enterRaffle{value: entranceFee}();
         vm.warp(block.timestamp + interval + 1); // Advance the block timestamp to the next interval
         vm.roll(block.number + 1); // advance the block number
-        raffle.performUpkeep();
+        raffle.performUpkeep("");
 
         // Act
         (bool upkeepNeeded, ) = raffle.checkUpkeep("");
@@ -161,7 +161,7 @@ contract RaffleTest is Test, CodeConstants {
         vm.roll(block.number + 1); // advance the block number
 
         // Act / Assert
-        raffle.performUpkeep();
+        raffle.performUpkeep("");
     }
 
     function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public {
@@ -184,7 +184,7 @@ contract RaffleTest is Test, CodeConstants {
                 rState
             )
         );
-        raffle.performUpkeep();
+        raffle.performUpkeep("");
     }
 
     modifier raffleEntered() {
@@ -202,7 +202,7 @@ contract RaffleTest is Test, CodeConstants {
     {
         // Act
         vm.recordLogs(); // Start recording the logs and events emitted by the performUpkeep function
-        raffle.performUpkeep();
+        raffle.performUpkeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs(); // Get the logs and events emitted by the performUpkeep function
         bytes32 requestId = entries[1].topics[1]; // Get the requestId from the logs
 
@@ -260,7 +260,7 @@ contract RaffleTest is Test, CodeConstants {
 
         // Act
         vm.recordLogs(); // Start recording the logs and events emitted by the performUpkeep function
-        raffle.performUpkeep();
+        raffle.performUpkeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs(); // Get the logs and events emitted by the performUpkeep function
         bytes32 requestId = entries[1].topics[1]; // Get the requestId from the logs
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(

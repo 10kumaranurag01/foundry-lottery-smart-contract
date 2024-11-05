@@ -21,18 +21,19 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
 /**
  * @title A sdample raffel contract
  * @author Kumar Anurag
  * @notice This contract is for creating a sample raffel contract
- * @dev Implements Chainlink VRFv2.5 for random number gev2.5neration
+ * @dev Implements Chainlink VRFv2.5 for random number generation
  */
-contract Raffle is VRFConsumerBaseV2Plus {
+contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     /*Errors */
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__TransferFailed();
@@ -55,7 +56,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     uint256 private immutable i_entranceFee;
     // @dev The duration of the lottery in seconds
     uint256 private immutable i_interval;
-    bytes32 private immutable i_keyHash;
+    bytes32 private immutable i_gasLane;
     uint256 private immutable i_subscriptionId;
     uint32 private immutable i_callbackGasLimit;
     address payable[] private s_players;
@@ -78,7 +79,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
-        i_keyHash = gasLane;
+        i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
 
@@ -119,18 +120,23 @@ contract Raffle is VRFConsumerBaseV2Plus {
      */
     function checkUpkeep(
         bytes memory /*checkData*/
-    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+    )
+        public
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory /* performData */)
+    {
         bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >=
             i_interval);
         bool isOpen = s_raffleState == RaffleState.OPEN;
         bool hasBalance = address(this).balance > 0;
         bool hasPlayers = s_players.length > 0;
-        upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
+        upkeepNeeded = (timeHasPassed && isOpen && hasBalance && hasPlayers);
         return (upkeepNeeded, "");
     }
 
     // 3. Be automatically called
-    function performUpkeep() external {
+    function performUpkeep(bytes calldata /* performData */) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
             revert Raffle__UpkeepNotNeeded(
@@ -141,9 +147,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         }
 
         s_raffleState = RaffleState.CALCULATING;
+
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
             .RandomWordsRequest({
-                keyHash: i_keyHash,
+                keyHash: i_gasLane,
                 subId: i_subscriptionId,
                 requestConfirmations: REQUEST_CONFIRMATIONS,
                 callbackGasLimit: i_callbackGasLimit,
@@ -163,7 +170,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     function fulfillRandomWords(
         uint256 /*requestId*/,
         uint256[] calldata randomWords
-    ) internal virtual override {
+    ) internal override {
         // Checks
         // Checks are basically the conditions that must be met for the function to execute successfully.
 
